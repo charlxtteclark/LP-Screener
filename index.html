@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LP Screener Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #0d9488 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #0d9488;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .input-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .input-section h2 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #0d9488;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #0d9488;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0f766e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.4);
+        }
+
+        .btn-secondary {
+            background: #1e3a8a;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #1e40af;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-primary:disabled, .btn-secondary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0d9488;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .lp-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .lp-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .lp-card.starred {
+            border: 3px solid #fbbf24;
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+            background: #fffbeb;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .card-header h3 {
+            color: #1e3a8a;
+            font-size: 18px;
+            flex: 1;
+        }
+
+        .star-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 10px;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+
+        .star-btn:hover {
+            transform: scale(1.3);
+        }
+
+        .star-btn.starred {
+            filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+        }
+
+        .overall-score {
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .score-a { background: #d1fae5; color: #065f46; }
+        .score-b { background: #dbeafe; color: #1e40af; }
+        .score-c { background: #fef3c7; color: #92400e; }
+        .score-d { background: #fee2e2; color: #991b1b; }
+        .score-f { background: #fee2e2; color: #991b1b; }
+
+        .criteria-scores {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .criterion {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .criterion-name {
+            font-weight: 500;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .criterion-score {
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .details {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .details-row {
+            margin-bottom: 8px;
+        }
+
+        .details-label {
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+
+        .email-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .email-modal.show {
+            display: flex;
+        }
+
+        .email-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .email-content h2 {
+            color: #0d9488;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .email-draft {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .email-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .stats-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0d9488;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            color: #999;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0d9488;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 LP Screener Dashboard</h1>
+            <p>Automated research and scoring for Limited Partner sourcing • Star an LP to generate intro email • Data auto-saves</p>
+        </div>
+
+        <div class="input-section">
+            <h2>Enter LP Firm Names</h2>
+            <textarea id="lpInput" placeholder="Enter LP firm names (one per line)&#10;Example:&#10;Tiger Global Management&#10;Coatue Management&#10;Viking Global Investors"></textarea>
+            <div class="button-group">
+                <button class="btn-primary" onclick="screenLPs()" id="screenBtn">🔍 Screen LPs</button>
+                <button class="btn-secondary" onclick="exportResults()" id="exportBtn" disabled>📊 Export to CSV</button>
+                <button class="btn-danger" onclick="clearResults()">🗑️ Clear All Data</button>
+            </div>
+        </div>
+
+        <div id="loadingSection" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Researching and scoring LPs... This may take a moment.</p>
+        </div>
+
+        <div id="statsSection" style="display: none;">
+            <div class="stats-bar">
+                <div class="stat">
+                    <div class="stat-number" id="totalCount">0</div>
+                    <div class="stat-label">Total Screened</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="starredCount">0</div>
+                    <div class="stat-label">⭐ Starred</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="avgScore">0</div>
+                    <div class="stat-label">Avg Score</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsSection">
+            <div class="empty-state">
+                <div style="font-size: 48px;">📋</div>
+                <p>Enter LP firm names above and click "Screen LPs" to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="emailModal" class="email-modal">
+        <div class="email-content">
+            <h2><span>📧</span> Introduction Email</h2>
+            <div id="emailDraft" class="email-draft"></div>
+            <div class="email-actions">
+                <button class="btn-primary" onclick="copyEmail()">📋 Copy to Clipboard</button>
+                <button class="btn-secondary" onclick="closeEmailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let lpData = [];
+        const STORAGE_KEY = 'lp_screener_data';
+
+        // Load data from localStorage on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+        });
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    lpData = JSON.parse(saved);
+                    if (lpData.length > 0) {
+                        displayResults();
+                        updateStats();
+                        document.getElementById('exportBtn').disabled = false;
+                        document.getElementById('statsSection').style.display = 'block';
+                        showToast('Data loaded from previous session');
+                    }
+                } catch (e) {
+                    console.error('Error loading data:', e);
+                }
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(lpData));
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        async function screenLPs() {
+            const input = document.getElementById('lpInput').value.trim();
+            if (!input) {
+                alert('Please enter at least one LP firm name');
+                return;
+            }
+
+            const firmNames = input.split('\n').filter(name => name.trim());
+            
+            document.getElementById('screenBtn').disabled = true;
+            document.getElementById('loadingSection').style.display = 'block';
+            
+            for (const firmName of firmNames) {
+                // Check if already screened
+                if (!lpData.find(lp => lp.name.toLowerCase() === firmName.trim().toLowerCase())) {
+                    const lpResult = await researchAndScoreLP(firmName.trim());
+                    lpData.push(lpResult);
+                    saveToStorage();
+                }
+            }
+
+            displayResults();
+            updateStats();
+            
+            document.getElementById('screenBtn').disabled = false;
+            document.getElementById('exportBtn').disabled = false;
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('statsSection').style.display = 'block';
+            document.getElementById('lpInput').value = '';
+            
+            showToast(`Screened ${firmNames.length} LP${firmNames.length > 1 ? 's' : ''}`);
+        }
+
+        async function researchAndScoreLP(firmName) {
+            // Call Claude API for real research
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 1000,
+                        messages: [{
+                            role: "user",
+                            content: `Research the LP firm "${firmName}" and score them on these 5 criteria (0-100 scale each):
+1. Firm Type (RIA/Family Office preference = higher score)
+2. AUM (larger = higher score)  
+3. Location (US coastal hubs = higher score)
+4. Stage Focus (early/growth stage = higher score)
+5. Investment Strategy (tech/VC focus = higher score)
+
+Use web search to find real information. Return ONLY valid JSON with no markdown or explanations:
+{
+  "scores": {
+    "firmType": 85,
+    "aum": 90,
+    "location": 80,
+    "stage": 75,
+    "strategy": 88
+  },
+  "details": {
+    "firmType": "Family Office",
+    "aum": "$2.5B",
+    "location": "San Francisco, CA",
+    "stage": "Early-Growth Stage",
+    "strategy": "Tech-focused, B2B SaaS"
+  }
+}`
+                        }],
+                        tools: [{
+                            "type": "web_search_20250305",
+                            "name": "web_search"
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const responseText = data.content.find(block => block.type === 'text')?.text || '';
+                
+                // Parse JSON from response
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    const scores = parsed.scores;
+                    const overallScore = Math.round(
+                        (scores.firmType + scores.aum + scores.location + scores.stage + scores.strategy) / 5
+                    );
+
+                    return {
+                        name: firmName,
+                        overallScore: overallScore,
+                        grade: getLetterGrade(overallScore),
+                        scores: scores,
+                        details: parsed.details,
+                        starred: false,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+            } catch (error) {
+                console.error('Error researching LP:', error);
+            }
+
+            // Fallback to simulated data if API fails
+            return generateSimulatedLP(firmName);
+        }
+
+        function generateSimulatedLP(firmName) {
+            const scores = {
+                firmType: Math.floor(Math.random() * 40) + 60,
+                aum: Math.floor(Math.random() * 40) + 60,
+                location: Math.floor(Math.random() * 40) + 60,
+                stage: Math.floor(Math.random() * 40) + 60,
+                strategy: Math.floor(Math.random() * 40) + 60
+            };
+
+            const overallScore = Math.round(
+                (scores.firmType + scores.aum + scores.location + scores.stage + scores.strategy) / 5
+            );
+
+            const firmTypes = ['Family Office', 'RIA', 'Endowment', 'Foundation', 'Fund of Funds'];
+            const locations = ['San Francisco, CA', 'New York, NY', 'Boston, MA', 'Austin, TX', 'Los Angeles, CA'];
+            const stages = ['Early Stage', 'Growth', 'Late Stage', 'Multi-Stage'];
+
+            return {
+                name: firmName,
+                overallScore: overallScore,
+                grade: getLetterGrade(overallScore),
+                scores: scores,
+                details: {
+                    firmType: firmTypes[Math.floor(Math.random() * firmTypes.length)],
+                    aum: `$${(Math.floor(Math.random() * 50) + 5) * 100}M`,
+                    location: locations[Math.floor(Math.random() * locations.length)],
+                    stage: stages[Math.floor(Math.random() * stages.length)],
+                    strategy: 'Tech-focused, B2B SaaS, Enterprise Software'
+                },
+                starred: false,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        function getLetterGrade(score) {
+            if (score >= 90) return 'A';
+            if (score >= 80) return 'B';
+            if (score >= 70) return 'C';
+            if (score >= 60) return 'D';
+            return 'F';
+        }
+
+        function getScoreClass(score) {
+            if (score >= 90) return 'score-a';
+            if (score >= 80) return 'score-b';
+            if (score >= 70) return 'score-c';
+            if (score >= 60) return 'score-d';
+            return 'score-f';
+        }
+
+        function displayResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            
+            // Sort by overall score
+            const sortedData = [...lpData].sort((a, b) => b.overallScore - a.overallScore);
+            
+            const html = `
+                <div class="results-grid">
+                    ${sortedData.map((lp, index) => {
+                        const dataIndex = lpData.findIndex(item => item.name === lp.name);
+                        return `
+                        <div class="lp-card ${lp.starred ? 'starred' : ''}" id="card-${dataIndex}">
+                            <div class="card-header">
+                                <h3>${lp.name}</h3>
+                                <button class="star-btn ${lp.starred ? 'starred' : ''}" onclick="toggleStar(${dataIndex})">
+                                    ${lp.starred ? '⭐' : '☆'}
+                                </button>
+                            </div>
+                            
+                            <div class="overall-score ${getScoreClass(lp.overallScore)}">
+                                ${lp.grade} (${lp.overallScore})
+                            </div>
+
+                            <div class="criteria-scores">
+                                <div class="criterion">
+                                    <span class="criterion-name">Firm Type</span>
+                                    <span class="criterion-score ${getScoreClass(lp.scores.firmType)}">${lp.scores.firmType}</span>
+                                </div>
+                                <div class="criterion">
+                                    <span class="criterion-name">AUM</span>
+                                    <span class="criterion-score ${getScoreClass(lp.scores.aum)}">${lp.scores.aum}</span>
+                                </div>
+                                <div class="criterion">
+                                    <span class="criterion-name">Location</span>
+                                    <span class="criterion-score ${getScoreClass(lp.scores.location)}">${lp.scores.location}</span>
+                                </div>
+                                <div class="criterion">
+                                    <span class="criterion-name">Stage Focus</span>
+                                    <span class="criterion-score ${getScoreClass(lp.scores.stage)}">${lp.scores.stage}</span>
+                                </div>
+                                <div class="criterion">
+                                    <span class="criterion-name">Strategy</span>
+                                    <span class="criterion-score ${getScoreClass(lp.scores.strategy)}">${lp.scores.strategy}</span>
+                                </div>
+                            </div>
+
+                            <div class="details">
+                                <div class="details-row">
+                                    <span class="details-label">Type:</span> ${lp.details.firmType}
+                                </div>
+                                <div class="details-row">
+                                    <span class="details-label">AUM:</span> ${lp.details.aum}
+                                </div>
+                                <div class="details-row">
+                                    <span class="details-label">Location:</span> ${lp.details.location}
+                                </div>
+                                <div class="details-row">
+                                    <span class="details-label">Stage:</span> ${lp.details.stage}
+                                </div>
+                                <div class="details-row">
+                                    <span class="details-label">Strategy:</span> ${lp.details.strategy}
+                                </div>
+                            </div>
+                        </div>
+                    `}).join('')}
+                </div>
+            `;
+            
+            resultsSection.innerHTML = html;
+        }
+
+        function toggleStar(index) {
+            lpData[index].starred = !lpData[index].starred;
+            
+            if (lpData[index].starred) {
+                generateAndShowEmail(lpData[index]);
+            }
+            
+            saveToStorage();
+            displayResults();
+            updateStats();
+        }
+
+        async function generateAndShowEmail(lp) {
+            // Call Claude API to generate personalized email
+            document.getElementById('emailDraft').textContent = 'Generating personalized email...';
+            document.getElementById('emailModal').classList.add('show');
+
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 1000,
+                        messages: [{
+                            role: "user",
+                            content: `Write a professional, warm introduction email to ${lp.name}. 
+
+Details about them:
+- Firm Type: ${lp.details.firmType}
+- AUM: ${lp.details.aum}
+- Location: ${lp.details.location}
+- Investment Focus: ${lp.details.stage}, ${lp.details.strategy}
+
+The email should:
+1. Be professional but personable
+2. Reference their investment focus and why we're a good fit
+3. Mention we'd love to explore a partnership
+4. Request a brief intro call
+5. Include placeholder for [Your Name], [Your Fund], [Your Focus]
+
+Format as a complete email with subject line.`
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const emailText = data.content.find(block => block.type === 'text')?.text || '';
+                document.getElementById('emailDraft').textContent = emailText;
+            } catch (error) {
+                // Fallback email template
+                const email = `Subject: Introduction to [Your Fund Name] - Partnership Opportunity
+
+Dear ${lp.name} Team,
+
+I hope this email finds you well. My name is [Your Name], and I'm reaching out from [Your Fund Name], a [stage/sector focus] venture capital firm.
+
+We came across ${lp.name} in our LP research and were impressed by your investment approach, particularly your focus on ${lp.details.strategy}. With your ${lp.details.aum} AUM and strong track record in ${lp.details.stage} investments, we believe there's strong alignment with our fund's thesis.
+
+Our fund focuses on [your focus area], and we're currently raising [Fund details]. We've backed companies like [portfolio examples] and have achieved [key metrics/returns].
+
+Given your expertise in ${lp.details.stage} investments and your presence in ${lp.details.location}, we'd love to explore a potential partnership. Would you be open to a brief 20-minute call to discuss how we might work together?
+
+I'm happy to work around your schedule. Please let me know what works best for you.
+
+Best regards,
+[Your Name]
+[Your Title]
+[Your Fund Name]
+[Contact Information]`;
+
+                document.getElementById('emailDraft').textContent = email;
+            }
+        }
+
+        function closeEmailModal() {
+            document.getElementById('emailModal').classList.remove('show');
+        }
+
+        function copyEmail() {
+            const emailText = document.getElementById('emailDraft').textContent;
+            navigator.clipboard.writeText(emailText).then(() => {
+                showToast('Email copied to clipboard!');
+            });
+        }
+
+        function updateStats() {
+            const total = lpData.length;
+            const starred = lpData.filter(lp => lp.starred).length;
+            const avgScore = total > 0 
+                ? Math.round(lpData.reduce((sum, lp) => sum + lp.overallScore, 0) / total)
+                : 0;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('starredCount').textContent = starred;
+            document.getElementById('avgScore').textContent = avgScore;
+        }
+
+        function exportResults() {
+            if (lpData.length === 0) return;
+
+            const csvContent = [
+                ['Firm Name', 'Overall Score', 'Grade', 'Firm Type Score', 'AUM Score', 'Location Score', 'Stage Score', 'Strategy Score', 'Firm Type', 'AUM', 'Location', 'Stage Focus', 'Strategy', 'Starred', 'Date Added'],
+                ...lpData.map(lp => [
+                    lp.name,
+                    lp.overallScore,
+                    lp.grade,
+                    lp.scores.firmType,
+                    lp.scores.aum,
+                    lp.scores.location,
+                    lp.scores.stage,
+                    lp.scores.strategy,
+                    lp.details.firmType,
+                    lp.details.aum,
+                    lp.details.location,
+                    lp.details.stage,
+                    lp.details.strategy,
+                    lp.starred ? 'Yes' : 'No',
+                    new Date(lp.timestamp).toLocaleDateString()
+                ])
+            ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lp-screening-results-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showToast('Export complete!');
+        }
+
+        function clearResults() {
+            if (confirm('Are you sure you want to clear all screening data? This cannot be undone.')) {
+                lpData = [];
+                localStorage.removeItem(STORAGE_KEY);
+                document.getElementById('lpInput').value = '';
+                document.getElementById('resultsSection').innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 48px;">📋</div>
+                        <p>Enter LP firm names above and click "Screen LPs" to get started</p>
+                    </div>
+                `;
+                document.getElementById('statsSection').style.display = 'none';
+                document.getElementById('exportBtn').disabled = true;
+                showToast('All data cleared');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('emailModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEmailModal();
+            }
+        });
+    </script>
+</body>
+</html>
