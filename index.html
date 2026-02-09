@@ -672,17 +672,24 @@
                     },
                     body: JSON.stringify({
                         model: "claude-sonnet-4-20250514",
-                        max_tokens: 1000,
+                        max_tokens: 2000,
                         messages: [{
                             role: "user",
-                            content: `Research the LP firm "${firmName}" and score them on these 5 criteria (0-100 scale each):
-1. Firm Type (RIA/Family Office preference = higher score)
-2. AUM (larger = higher score)  
-3. Location (US coastal hubs = higher score)
-4. Stage Focus (early/growth stage = higher score)
-5. Investment Strategy (tech/VC focus = higher score)
+                            content: `Research the LP firm "${firmName}" thoroughly. Use web search to find:
+1. Their official website
+2. SEC Form ADV filings if they exist
+3. Any public information about their investment focus
 
-Use web search to find real information. Return ONLY valid JSON with no markdown or explanations:
+Score them on these 5 criteria (0-100 scale each):
+1. Firm Type (Family Office=100, RIA=90, Endowment=80, Foundation=70, other=50)
+2. AUM (>$5B=100, $1B-5B=90, $500M-1B=80, $100M-500M=70, <$100M=60, Unknown=50)
+3. Location (SF/NY/Boston=100, other major US cities=80, international=60, Unknown=50)
+4. Stage Focus (Early Stage=100, Growth=90, Late Stage=70, Multi-Stage=80, Unknown=50)
+5. Investment Strategy (Tech/VC focused=100, Diversified=80, Non-tech=60, Unknown=50)
+
+CRITICAL: If you cannot find reliable information, use "Unknown" - DO NOT GUESS OR MAKE UP DATA.
+
+Return ONLY valid JSON with no markdown or explanations:
 {
   "scores": {
     "firmType": 85,
@@ -695,10 +702,13 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
     "firmType": "Family Office",
     "aum": "$2.5B",
     "location": "San Francisco, CA",
-    "stage": "Early-Growth Stage",
+    "stage": "Early Stage",
     "strategy": "Tech-focused, B2B SaaS"
-  }
-}`
+  },
+  "sources": "Brief note on what sources you found"
+}
+
+If you found their website, mention it. If you found SEC filings, mention it. If information is limited, say so.`
                         }],
                         tools: [{
                             "type": "web_search_20250305",
@@ -725,6 +735,7 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                         grade: getLetterGrade(overallScore),
                         scores: scores,
                         details: parsed.details,
+                        sources: parsed.sources || 'Research completed',
                         contactTitle: contactTitle || null,
                         linkedInURL: getLinkedInSearchURL(firmName, contactTitle),
                         notes: '',
@@ -736,39 +747,26 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                 console.error('Error researching LP:', error);
             }
 
-            // Fallback to simulated data if API fails
-            return generateSimulatedLP(firmName, contactTitle);
-        }
-
-        function generateSimulatedLP(firmName, contactTitle) {
-            const scores = {
-                firmType: Math.floor(Math.random() * 40) + 60,
-                aum: Math.floor(Math.random() * 40) + 60,
-                location: Math.floor(Math.random() * 40) + 60,
-                stage: Math.floor(Math.random() * 40) + 60,
-                strategy: Math.floor(Math.random() * 40) + 60
-            };
-
-            const overallScore = Math.round(
-                (scores.firmType + scores.aum + scores.location + scores.stage + scores.strategy) / 5
-            );
-
-            const firmTypes = ['Family Office', 'RIA', 'Endowment', 'Foundation', 'Fund of Funds'];
-            const locations = ['San Francisco, CA', 'New York, NY', 'Boston, MA', 'Austin, TX', 'Los Angeles, CA'];
-            const stages = ['Early Stage', 'Growth', 'Late Stage', 'Multi-Stage'];
-
+            // If API fails completely, return minimal data
             return {
                 name: firmName,
-                overallScore: overallScore,
-                grade: getLetterGrade(overallScore),
-                scores: scores,
-                details: {
-                    firmType: firmTypes[Math.floor(Math.random() * firmTypes.length)],
-                    aum: `$${(Math.floor(Math.random() * 50) + 5) * 100}M`,
-                    location: locations[Math.floor(Math.random() * locations.length)],
-                    stage: stages[Math.floor(Math.random() * stages.length)],
-                    strategy: 'Tech-focused, B2B SaaS, Enterprise Software'
+                overallScore: 50,
+                grade: 'D',
+                scores: {
+                    firmType: 50,
+                    aum: 50,
+                    location: 50,
+                    stage: 50,
+                    strategy: 50
                 },
+                details: {
+                    firmType: 'Unknown',
+                    aum: 'Unknown',
+                    location: 'Unknown',
+                    stage: 'Unknown',
+                    strategy: 'Unknown'
+                },
+                sources: 'Research failed - please verify manually',
                 contactTitle: contactTitle || null,
                 linkedInURL: getLinkedInSearchURL(firmName, contactTitle),
                 notes: '',
@@ -844,6 +842,11 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                                 <div class="details-row">
                                     <span class="details-label">Strategy:</span> ${lp.details.strategy}
                                 </div>
+                                ${lp.sources ? `
+                                <div class="details-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #888;">
+                                    <span class="details-label">Sources:</span> ${lp.sources}
+                                </div>
+                                ` : ''}
                             </div>
 
                             <div class="notes-section">
