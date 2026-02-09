@@ -230,13 +230,18 @@
             flex: 1;
         }
 
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: 10px;
+        }
+
         .star-btn {
             background: none;
             border: none;
             font-size: 28px;
             cursor: pointer;
             padding: 0;
-            margin-left: 10px;
             transition: transform 0.2s;
             line-height: 1;
         }
@@ -247,6 +252,22 @@
 
         .star-btn.starred {
             filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.2s;
+            line-height: 1;
+            opacity: 0.6;
+        }
+
+        .delete-btn:hover {
+            transform: scale(1.2);
+            opacity: 1;
         }
 
         .contact-info {
@@ -319,6 +340,40 @@
         .details-label {
             font-weight: 600;
             color: #1e3a8a;
+        }
+
+        .notes-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .notes-label {
+            font-weight: 600;
+            color: #1e3a8a;
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .notes-textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .notes-textarea:focus {
+            outline: none;
+            border-color: #0d9488;
+        }
+
+        .notes-textarea::placeholder {
+            color: #999;
         }
 
         .email-modal {
@@ -671,6 +726,7 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                         details: parsed.details,
                         contactTitle: contactTitle || null,
                         linkedInURL: getLinkedInSearchURL(firmName, contactTitle),
+                        notes: '',
                         starred: false,
                         timestamp: new Date().toISOString()
                     };
@@ -714,6 +770,7 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                 },
                 contactTitle: contactTitle || null,
                 linkedInURL: getLinkedInSearchURL(firmName, contactTitle),
+                notes: '',
                 starred: false,
                 timestamp: new Date().toISOString()
             };
@@ -749,9 +806,14 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                         <div class="lp-card ${lp.starred ? 'starred' : ''}" id="card-${dataIndex}">
                             <div class="card-header">
                                 <h3>${lp.name}</h3>
-                                <button class="star-btn ${lp.starred ? 'starred' : ''}" onclick="toggleStar(${dataIndex})">
-                                    ${lp.starred ? '⭐' : '☆'}
-                                </button>
+                                <div class="card-actions">
+                                    <button class="star-btn ${lp.starred ? 'starred' : ''}" onclick="toggleStar(${dataIndex})">
+                                        ${lp.starred ? '⭐' : '☆'}
+                                    </button>
+                                    <button class="delete-btn" onclick="deleteLP(${dataIndex})" title="Delete this LP">
+                                        🗑️
+                                    </button>
+                                </div>
                             </div>
                             
                             ${lp.contactTitle ? `
@@ -765,7 +827,6 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                                 ${lp.grade} (${lp.overallScore})
                             </div>
 
-                            
                             <div class="details">
                                 <div class="details-row">
                                     <span class="details-label">Type:</span> ${lp.details.firmType}
@@ -782,6 +843,15 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                                 <div class="details-row">
                                     <span class="details-label">Strategy:</span> ${lp.details.strategy}
                                 </div>
+                            </div>
+
+                            <div class="notes-section">
+                                <label class="notes-label">📝 Notes:</label>
+                                <textarea 
+                                    class="notes-textarea" 
+                                    placeholder="Add your notes here..."
+                                    onblur="saveNotes(${dataIndex}, this.value)"
+                                >${lp.notes || ''}</textarea>
                             </div>
                         </div>
                     `}).join('')}
@@ -801,6 +871,28 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
             saveToStorage();
             displayResults();
             updateStats();
+        }
+
+        function deleteLP(index) {
+            const lpName = lpData[index].name;
+            if (confirm(`Are you sure you want to delete ${lpName}? This cannot be undone.`)) {
+                lpData.splice(index, 1);
+                saveToStorage();
+                displayResults();
+                updateStats();
+                showToast(`Deleted ${lpName}`);
+                
+                if (lpData.length === 0) {
+                    document.getElementById('statsSection').style.display = 'none';
+                    document.getElementById('exportBtn').disabled = true;
+                }
+            }
+        }
+
+        function saveNotes(index, notes) {
+            lpData[index].notes = notes;
+            saveToStorage();
+            showToast('Notes saved');
         }
 
         async function generateAndShowEmail(lp) {
@@ -899,7 +991,7 @@ Best regards,
             if (lpData.length === 0) return;
 
             const csvContent = [
-                ['Firm Name', 'Contact Title', 'LinkedIn Search', 'Overall Score', 'Grade', 'Firm Type Score', 'AUM Score', 'Location Score', 'Stage Score', 'Strategy Score', 'Firm Type', 'AUM', 'Location', 'Stage Focus', 'Strategy', 'Starred', 'Date Added'],
+                ['Firm Name', 'Contact Title', 'LinkedIn Search', 'Overall Score', 'Grade', 'Firm Type Score', 'AUM Score', 'Location Score', 'Stage Score', 'Strategy Score', 'Firm Type', 'AUM', 'Location', 'Stage Focus', 'Strategy', 'Notes', 'Starred', 'Date Added'],
                 ...lpData.map(lp => [
                     lp.name,
                     lp.contactTitle || '',
@@ -916,6 +1008,7 @@ Best regards,
                     lp.details.location,
                     lp.details.stage,
                     lp.details.strategy,
+                    lp.notes || '',
                     lp.starred ? 'Yes' : 'No',
                     new Date(lp.timestamp).toLocaleDateString()
                 ])
