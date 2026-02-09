@@ -55,6 +55,13 @@
             font-size: 18px;
         }
 
+        .input-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
         textarea {
             width: 100%;
             padding: 12px;
@@ -66,9 +73,31 @@
             min-height: 100px;
         }
 
-        textarea:focus {
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        textarea:focus, input:focus {
             outline: none;
             border-color: #0d9488;
+        }
+
+        label {
+            display: block;
+            color: #1e3a8a;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
         }
 
         .button-group {
@@ -118,6 +147,21 @@
             background: #b91c1c;
         }
 
+        .btn-linkedin {
+            background: #0077b5;
+            color: white;
+            padding: 8px 16px;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .btn-linkedin:hover {
+            background: #006399;
+            transform: translateY(-1px);
+        }
+
         .btn-primary:disabled, .btn-secondary:disabled {
             background: #ccc;
             cursor: not-allowed;
@@ -149,7 +193,7 @@
 
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
@@ -203,6 +247,20 @@
 
         .star-btn.starred {
             filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+        }
+
+        .contact-info {
+            background: #f0f9ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #0d9488;
+        }
+
+        .contact-name {
+            font-weight: 600;
+            color: #1e3a8a;
+            margin-bottom: 5px;
         }
 
         .overall-score {
@@ -384,6 +442,16 @@
                 opacity: 1;
             }
         }
+
+        @media (max-width: 768px) {
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -394,8 +462,18 @@
         </div>
 
         <div class="input-section">
-            <h2>Enter LP Firm Names</h2>
-            <textarea id="lpInput" placeholder="Enter LP firm names (one per line)&#10;Example:&#10;Tiger Global Management&#10;Coatue Management&#10;Viking Global Investors"></textarea>
+            <h2>Enter LP Information</h2>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="lpInput">LP Firm Names (one per line)</label>
+                    <textarea id="lpInput" placeholder="Example:&#10;Tiger Global Management&#10;Coatue Management&#10;Viking Global Investors"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="contactTitle">Target Contact Title (optional)</label>
+                    <input type="text" id="contactTitle" placeholder="e.g., CIO, Director of Alts, Director of Private Investments">
+                    <p style="font-size: 12px; color: #666; margin-top: 8px;">💡 This will generate a LinkedIn search link for each LP</p>
+                </div>
+            </div>
             <div class="button-group">
                 <button class="btn-primary" onclick="screenLPs()" id="screenBtn">🔍 Screen LPs</button>
                 <button class="btn-secondary" onclick="exportResults()" id="exportBtn" disabled>📊 Export to CSV</button>
@@ -486,6 +564,13 @@
             }, 3000);
         }
 
+        function getLinkedInSearchURL(firmName, contactTitle) {
+            if (!contactTitle) return null;
+            // Create LinkedIn search URL for "contactTitle at firmName"
+            const searchQuery = encodeURIComponent(`${contactTitle} ${firmName}`);
+            return `https://www.linkedin.com/search/results/people/?keywords=${searchQuery}`;
+        }
+
         async function screenLPs() {
             const input = document.getElementById('lpInput').value.trim();
             if (!input) {
@@ -494,6 +579,7 @@
             }
 
             const firmNames = input.split('\n').filter(name => name.trim());
+            const contactTitle = document.getElementById('contactTitle').value.trim();
             
             document.getElementById('screenBtn').disabled = true;
             document.getElementById('loadingSection').style.display = 'block';
@@ -501,7 +587,7 @@
             for (const firmName of firmNames) {
                 // Check if already screened
                 if (!lpData.find(lp => lp.name.toLowerCase() === firmName.trim().toLowerCase())) {
-                    const lpResult = await researchAndScoreLP(firmName.trim());
+                    const lpResult = await researchAndScoreLP(firmName.trim(), contactTitle);
                     lpData.push(lpResult);
                     saveToStorage();
                 }
@@ -519,7 +605,7 @@
             showToast(`Screened ${firmNames.length} LP${firmNames.length > 1 ? 's' : ''}`);
         }
 
-        async function researchAndScoreLP(firmName) {
+        async function researchAndScoreLP(firmName, contactTitle) {
             // Call Claude API for real research
             try {
                 const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -582,6 +668,8 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                         grade: getLetterGrade(overallScore),
                         scores: scores,
                         details: parsed.details,
+                        contactTitle: contactTitle || null,
+                        linkedInURL: getLinkedInSearchURL(firmName, contactTitle),
                         starred: false,
                         timestamp: new Date().toISOString()
                     };
@@ -591,10 +679,10 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
             }
 
             // Fallback to simulated data if API fails
-            return generateSimulatedLP(firmName);
+            return generateSimulatedLP(firmName, contactTitle);
         }
 
-        function generateSimulatedLP(firmName) {
+        function generateSimulatedLP(firmName, contactTitle) {
             const scores = {
                 firmType: Math.floor(Math.random() * 40) + 60,
                 aum: Math.floor(Math.random() * 40) + 60,
@@ -623,6 +711,8 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                     stage: stages[Math.floor(Math.random() * stages.length)],
                     strategy: 'Tech-focused, B2B SaaS, Enterprise Software'
                 },
+                contactTitle: contactTitle || null,
+                linkedInURL: getLinkedInSearchURL(firmName, contactTitle),
                 starred: false,
                 timestamp: new Date().toISOString()
             };
@@ -662,6 +752,13 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                                     ${lp.starred ? '⭐' : '☆'}
                                 </button>
                             </div>
+                            
+                            ${lp.contactTitle ? `
+                            <div class="contact-info">
+                                <div class="contact-name">🎯 ${lp.contactTitle}</div>
+                                ${lp.linkedInURL ? `<a href="${lp.linkedInURL}" target="_blank" class="btn-linkedin">🔗 Search on LinkedIn</a>` : ''}
+                            </div>
+                            ` : ''}
                             
                             <div class="overall-score ${getScoreClass(lp.overallScore)}">
                                 ${lp.grade} (${lp.overallScore})
@@ -733,6 +830,8 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
             document.getElementById('emailModal').classList.add('show');
 
             try {
+                const contactInfo = lp.contactTitle ? `\nTarget Contact: ${lp.contactTitle}` : '';
+                
                 const response = await fetch("https://api.anthropic.com/v1/messages", {
                     method: "POST",
                     headers: {
@@ -743,7 +842,7 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                         max_tokens: 1000,
                         messages: [{
                             role: "user",
-                            content: `Write a professional, warm introduction email to ${lp.name}. 
+                            content: `Write a professional, warm introduction email to ${lp.name}. ${contactInfo}
 
 Details about them:
 - Firm Type: ${lp.details.firmType}
@@ -757,6 +856,7 @@ The email should:
 3. Mention we'd love to explore a partnership
 4. Request a brief intro call
 5. Include placeholder for [Your Name], [Your Fund], [Your Focus]
+${lp.contactTitle ? `6. Address it to the ${lp.contactTitle}` : ''}
 
 Format as a complete email with subject line.`
                         }]
@@ -768,17 +868,18 @@ Format as a complete email with subject line.`
                 document.getElementById('emailDraft').textContent = emailText;
             } catch (error) {
                 // Fallback email template
+                const contactGreeting = lp.contactTitle ? `Dear ${lp.contactTitle} at ${lp.name},` : `Dear ${lp.name} Team,`;
                 const email = `Subject: Introduction to [Your Fund Name] - Partnership Opportunity
 
-Dear ${lp.name} Team,
+${contactGreeting}
 
 I hope this email finds you well. My name is [Your Name], and I'm reaching out from [Your Fund Name], a [stage/sector focus] venture capital firm.
 
-We came across ${lp.name} in our LP research and were impressed by your investment approach, particularly your focus on ${lp.details.strategy}. With your ${lp.details.aum} AUM and strong track record in ${lp.details.stage} investments, we believe there's strong alignment with our fund's thesis.
+We came across ${lp.name} in our research and were impressed by your investment approach, particularly your focus on ${lp.details.strategy}. With your ${lp.details.aum} AUM and strong track record in ${lp.details.stage} investments, we believe there's strong alignment with our fund's thesis.
 
 Our fund focuses on [your focus area], and we're currently raising [Fund details]. We've backed companies like [portfolio examples] and have achieved [key metrics/returns].
 
-Given your expertise in ${lp.details.stage} investments and your presence in ${lp.details.location}, we'd love to explore a potential partnership. Would you be open to a brief 20-minute call to discuss how we might work together?
+Given your expertise in ${lp.details.stage} and your presence in ${lp.details.location}, we'd love to explore a potential partnership. Would you be open to a brief 20-minute call to discuss how we might work together?
 
 I'm happy to work around your schedule. Please let me know what works best for you.
 
@@ -819,9 +920,11 @@ Best regards,
             if (lpData.length === 0) return;
 
             const csvContent = [
-                ['Firm Name', 'Overall Score', 'Grade', 'Firm Type Score', 'AUM Score', 'Location Score', 'Stage Score', 'Strategy Score', 'Firm Type', 'AUM', 'Location', 'Stage Focus', 'Strategy', 'Starred', 'Date Added'],
+                ['Firm Name', 'Contact Title', 'LinkedIn Search', 'Overall Score', 'Grade', 'Firm Type Score', 'AUM Score', 'Location Score', 'Stage Score', 'Strategy Score', 'Firm Type', 'AUM', 'Location', 'Stage Focus', 'Strategy', 'Starred', 'Date Added'],
                 ...lpData.map(lp => [
                     lp.name,
+                    lp.contactTitle || '',
+                    lp.linkedInURL || '',
                     lp.overallScore,
                     lp.grade,
                     lp.scores.firmType,
@@ -855,6 +958,7 @@ Best regards,
                 lpData = [];
                 localStorage.removeItem(STORAGE_KEY);
                 document.getElementById('lpInput').value = '';
+                document.getElementById('contactTitle').value = '';
                 document.getElementById('resultsSection').innerHTML = `
                     <div class="empty-state">
                         <div style="font-size: 48px;">📋</div>
