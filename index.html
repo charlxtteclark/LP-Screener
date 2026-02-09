@@ -765,29 +765,7 @@ Use web search to find real information. Return ONLY valid JSON with no markdown
                                 ${lp.grade} (${lp.overallScore})
                             </div>
 
-                            <div class="criteria-scores">
-                                <div class="criterion">
-                                    <span class="criterion-name">Firm Type</span>
-                                    <span class="criterion-score ${getScoreClass(lp.scores.firmType)}">${lp.scores.firmType}</span>
-                                </div>
-                                <div class="criterion">
-                                    <span class="criterion-name">AUM</span>
-                                    <span class="criterion-score ${getScoreClass(lp.scores.aum)}">${lp.scores.aum}</span>
-                                </div>
-                                <div class="criterion">
-                                    <span class="criterion-name">Location</span>
-                                    <span class="criterion-score ${getScoreClass(lp.scores.location)}">${lp.scores.location}</span>
-                                </div>
-                                <div class="criterion">
-                                    <span class="criterion-name">Stage Focus</span>
-                                    <span class="criterion-score ${getScoreClass(lp.scores.stage)}">${lp.scores.stage}</span>
-                                </div>
-                                <div class="criterion">
-                                    <span class="criterion-name">Strategy</span>
-                                    <span class="criterion-score ${getScoreClass(lp.scores.strategy)}">${lp.scores.strategy}</span>
-                                </div>
-                            </div>
-
+                            
                             <div class="details">
                                 <div class="details-row">
                                     <span class="details-label">Type:</span> ${lp.details.firmType}
