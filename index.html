@@ -566,9 +566,10 @@
 
         function getLinkedInSearchURL(firmName, contactTitle) {
             if (!contactTitle) return null;
-            // Create LinkedIn search URL for "contactTitle at firmName"
-            const searchQuery = encodeURIComponent(`${contactTitle} ${firmName}`);
-            return `https://www.linkedin.com/search/results/people/?keywords=${searchQuery}`;
+            // Create LinkedIn search URL filtering by title AND current company
+            const title = encodeURIComponent(contactTitle);
+            const company = encodeURIComponent(firmName);
+            return `https://www.linkedin.com/search/results/people/?currentCompany=["${company}"]&title="${title}"`;
         }
 
         async function screenLPs() {
